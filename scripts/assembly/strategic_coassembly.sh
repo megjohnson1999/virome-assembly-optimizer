@@ -364,6 +364,27 @@ echo "  Summary: $SUMMARY_FILE"
 echo "  CSV data: $CSV_FILE"
 echo "  Assemblies: $OUTPUT_DIR/assemblies/"
 echo ""
-echo "Next steps:"
-echo "  1. Run quality assessment: bash scripts/quality_assessment/01_run_checkv.sh"
-echo "  2. Compare with other assembly strategies"
+
+# Run meta-assembly to create community-level assembly
+echo "Running meta-assembly to create community-level assembly..."
+bash scripts/assembly/meta_assembly.sh --input-type strategic --input-dir "$OUTPUT_DIR"
+
+if [[ $? -eq 0 ]]; then
+    echo "Strategy B (Strategic Co-assembly + Meta-assembly) completed successfully!"
+    echo ""
+    echo "Final outputs:"
+    echo "  Community assembly: results/assemblies/strategic_meta_assembly/meta_assembly_contigs.fasta"
+    echo "  Group assemblies: $OUTPUT_DIR/assemblies/"
+    echo "  Statistics: $OUTPUT_DIR/stats/ and results/assemblies/strategic_meta_assembly/stats/"
+    echo ""
+    echo "Next steps:"
+    echo "  1. Run quality assessment: bash scripts/quality_assessment/01_run_checkv.sh"
+    echo "  2. Compare with other assembly strategies"
+else
+    echo "Warning: Meta-assembly step failed, but strategic co-assemblies are complete"
+    echo "You can run meta-assembly manually: bash scripts/assembly/meta_assembly.sh --input-type strategic"
+    echo ""
+    echo "Next steps:"
+    echo "  1. Run quality assessment: bash scripts/quality_assessment/01_run_checkv.sh"
+    echo "  2. Compare with other assembly strategies"
+fi

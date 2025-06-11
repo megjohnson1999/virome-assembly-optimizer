@@ -336,6 +336,23 @@ echo "  Assembly files: $OUTPUT_DIR/{megahit,metaspades}/"
 echo "  Statistics: $OUTPUT_DIR/stats/"
 echo "  Logs: $OUTPUT_DIR/logs/"
 echo ""
-echo "Next steps:"
-echo "  1. Run quality assessment: bash scripts/quality_assessment/01_run_checkv.sh"
-echo "  2. Compare with co-assembly strategies"
+
+# Run meta-assembly to create community-level assembly
+echo "Running meta-assembly to create community-level assembly..."
+bash scripts/assembly/meta_assembly.sh --input-type individual --input-dir "$OUTPUT_DIR"
+
+if [[ $? -eq 0 ]]; then
+    echo "Strategy A (Individual + Meta-assembly) completed successfully!"
+    echo ""
+    echo "Final outputs:"
+    echo "  Community assembly: results/assemblies/individual_meta_assembly/meta_assembly_contigs.fasta"
+    echo "  Individual assemblies: $OUTPUT_DIR/{megahit,metaspades}/"
+    echo "  Statistics: $OUTPUT_DIR/stats/ and results/assemblies/individual_meta_assembly/stats/"
+    echo ""
+    echo "Next steps:"
+    echo "  1. Run quality assessment: bash scripts/quality_assessment/01_run_checkv.sh"
+    echo "  2. Compare with other assembly strategies"
+else
+    echo "Warning: Meta-assembly step failed, but individual assemblies are complete"
+    echo "You can run meta-assembly manually: bash scripts/assembly/meta_assembly.sh --input-type individual"
+fi

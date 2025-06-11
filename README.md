@@ -112,26 +112,29 @@ Rscript scripts/variable_analysis/02_plot_variable_importance.R
 
 ### Step 3: Execute Multiple Assembly Strategies
 
-**Strategy A: Individual Sample Assemblies**
+All strategies produce a final community-level assembly for fair comparison.
+
+**Strategy A: Individual + Meta-assembly**
 ```bash
+# Step 1: Individual sample assemblies
 bash scripts/assembly/individual_assembly.sh
+# Step 2: Meta-assembly to create community assembly
+bash scripts/assembly/meta_assembly.sh --input-type individual
 ```
 
-**Strategy B: Strategic Co-assemblies** (based on similarity and important variables)
+**Strategy B: Strategic Co-assemblies + Meta-assembly** (based on similarity and important variables)
 ```bash
-# Create co-assembly groups based on analysis results
+# Step 1: Create co-assembly groups based on analysis results
 python scripts/assembly/create_coassembly_groups.py
+# Step 2: Run strategic co-assemblies
 bash scripts/assembly/strategic_coassembly.sh
+# Step 3: Meta-assembly to create community assembly
+bash scripts/assembly/meta_assembly.sh --input-type strategic
 ```
 
-**Strategy C: Global Co-assembly** (all samples together)
+**Strategy C: Global Co-assembly** (all samples together - already community-level)
 ```bash
 bash scripts/assembly/global_coassembly.sh
-```
-
-**Strategy D: Meta-assembly** (combine contigs from individual assemblies)
-```bash
-bash scripts/assembly/meta_assembly.sh
 ```
 
 ### Step 4: Quality Assessment

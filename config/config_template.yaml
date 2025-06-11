@@ -69,10 +69,9 @@ assembly:
   
   # Assembly strategies to execute
   strategies:
-    individual: true
-    strategic_coassembly: true
+    individual_plus_meta: true
+    strategic_coassembly_plus_meta: true
     global_coassembly: true
-    meta_assembly: true
   
   # Assembler-specific settings
   megahit:

@@ -1,21 +1,123 @@
 #!/bin/bash
 
-# Meta-assembly script - combines contigs from individual assemblies
-# Uses overlap-based merging to create a unified assembly
+# Meta-assembly script - combines contigs from different assembly strategies
+# Uses overlap-based merging to create a unified community assembly
 
 set -euo pipefail
 
-# Configuration
-INDIVIDUAL_DIR=${INDIVIDUAL_DIR:-"results/assemblies/individual"}
-OUTPUT_DIR=${OUTPUT_DIR:-"results/assemblies/meta_assembly"}
+# Function to show usage
+show_usage() {
+    cat << EOF
+Usage: $0 [OPTIONS]
+
+Meta-assembly script for combining contigs into a community-level assembly.
+
+OPTIONS:
+    --input-type TYPE       Input assembly type: 'individual' or 'strategic' (required)
+    --input-dir DIR         Input directory containing assemblies (optional)
+    --output-dir DIR        Output directory (optional)
+    --threads N             Number of threads (default: 8)
+    --min-contig-len N      Minimum contig length (default: 500)
+    --min-identity N        Minimum identity for deduplication (default: 95)
+    --assembler-priority    Space-separated list of assemblers (default: "metaspades megahit")
+    --help                  Show this help message
+
+EXAMPLES:
+    # Meta-assembly from individual assemblies
+    $0 --input-type individual
+    
+    # Meta-assembly from strategic co-assemblies
+    $0 --input-type strategic --input-dir results/assemblies/strategic_coassembly
+    
+    # Custom settings
+    $0 --input-type individual --threads 16 --min-identity 98
+
+EOF
+}
+
+# Parse command line arguments
+INPUT_TYPE=""
+INPUT_DIR=""
+OUTPUT_DIR=""
 THREADS=${THREADS:-8}
 MIN_CONTIG_LEN=${MIN_CONTIG_LEN:-500}
 MIN_OVERLAP=${MIN_OVERLAP:-100}
 MIN_IDENTITY=${MIN_IDENTITY:-95}
-ASSEMBLER_PRIORITY=${ASSEMBLER_PRIORITY:-"metaspades megahit"}  # Priority order for selecting contigs
+ASSEMBLER_PRIORITY=${ASSEMBLER_PRIORITY:-"metaspades megahit"}
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --input-type)
+            INPUT_TYPE="$2"
+            shift 2
+            ;;
+        --input-dir)
+            INPUT_DIR="$2"
+            shift 2
+            ;;
+        --output-dir)
+            OUTPUT_DIR="$2"
+            shift 2
+            ;;
+        --threads)
+            THREADS="$2"
+            shift 2
+            ;;
+        --min-contig-len)
+            MIN_CONTIG_LEN="$2"
+            shift 2
+            ;;
+        --min-identity)
+            MIN_IDENTITY="$2"
+            shift 2
+            ;;
+        --assembler-priority)
+            ASSEMBLER_PRIORITY="$2"
+            shift 2
+            ;;
+        --help)
+            show_usage
+            exit 0
+            ;;
+        *)
+            echo "Error: Unknown option $1"
+            show_usage
+            exit 1
+            ;;
+    esac
+done
+
+# Validate required arguments
+if [[ -z "$INPUT_TYPE" ]]; then
+    echo "Error: --input-type is required"
+    show_usage
+    exit 1
+fi
+
+if [[ "$INPUT_TYPE" != "individual" && "$INPUT_TYPE" != "strategic" ]]; then
+    echo "Error: --input-type must be 'individual' or 'strategic'"
+    exit 1
+fi
+
+# Set default directories based on input type
+if [[ -z "$INPUT_DIR" ]]; then
+    case "$INPUT_TYPE" in
+        "individual")
+            INPUT_DIR="results/assemblies/individual"
+            ;;
+        "strategic")
+            INPUT_DIR="results/assemblies/strategic_coassembly"
+            ;;
+    esac
+fi
+
+if [[ -z "$OUTPUT_DIR" ]]; then
+    OUTPUT_DIR="results/assemblies/${INPUT_TYPE}_meta_assembly"
+fi
 
 echo "Starting meta-assembly pipeline..."
-echo "Individual assemblies: $INDIVIDUAL_DIR"
+echo "Input type: $INPUT_TYPE"
+echo "Input directory: $INPUT_DIR"
 echo "Output directory: $OUTPUT_DIR"
 echo "Threads: $THREADS"
 echo "Minimum contig length: $MIN_CONTIG_LEN"
@@ -26,11 +128,11 @@ echo "Assembler priority: $ASSEMBLER_PRIORITY"
 # Create output directories
 mkdir -p "$OUTPUT_DIR"/{contigs,merged,stats,logs,temp}
 
-# Function to collect individual assembly contigs
-collect_individual_contigs() {
-    echo "Collecting contigs from individual assemblies..."
+# Function to collect contigs from assemblies
+collect_assembly_contigs() {
+    echo "Collecting contigs from $INPUT_TYPE assemblies..."
     
-    local collected_contigs="$OUTPUT_DIR/temp/all_individual_contigs.fasta"
+    local collected_contigs="$OUTPUT_DIR/temp/all_${INPUT_TYPE}_contigs.fasta"
     local contig_info="$OUTPUT_DIR/temp/contig_info.txt"
     
     # Initialize files
@@ -40,72 +142,96 @@ collect_individual_contigs() {
     local total_contigs=0
     local total_samples=0
     
-    # Process each assembler in priority order
-    for assembler in $ASSEMBLER_PRIORITY; do
-        local assembler_dir="$INDIVIDUAL_DIR/$assembler"
-        
-        if [[ ! -d "$assembler_dir" ]]; then
-            echo "  Warning: Assembler directory not found: $assembler_dir"
-            continue
-        fi
-        
-        echo "  Processing $assembler assemblies..."
-        
-        # Find all contig files for this assembler
-        find "$assembler_dir" -name "*_contigs.fasta" | sort | while read -r contig_file; do
-            if [[ ! -f "$contig_file" ]]; then
+    # Handle different input types
+    if [[ "$INPUT_TYPE" == "individual" ]]; then
+        # Process each assembler in priority order for individual assemblies
+        for assembler in $ASSEMBLER_PRIORITY; do
+            local assembler_dir="$INPUT_DIR/$assembler"
+            
+            if [[ ! -d "$assembler_dir" ]]; then
+                echo "  Warning: Assembler directory not found: $assembler_dir"
                 continue
             fi
             
-            # Extract sample name from filename
-            local filename=$(basename "$contig_file")
-            local sample_name=${filename%_contigs.fasta}
+            echo "  Processing $assembler individual assemblies..."
             
-            echo "    Processing: $sample_name"
-            
-            # Count contigs in this file
-            local n_contigs=$(grep -c "^>" "$contig_file" || echo "0")
-            
-            if [[ $n_contigs -eq 0 ]]; then
-                echo "      Warning: No contigs found in $contig_file"
-                continue
-            fi
-            
-            # Filter contigs by length and add to collection
-            seqtk seq -L "$MIN_CONTIG_LEN" "$contig_file" | \
-            awk -v sample="$sample_name" -v assembler="$assembler" -v file="$contig_file" '
-            /^>/ {
-                # Update contig ID to include meta-assembly prefix
-                contig_id = substr($0, 2);  # Remove >
-                new_id = "META_" sample "_" assembler "_" contig_id;
-                print ">" new_id;
-                
-                # Store info for tracking
-                current_contig = new_id;
-                current_length = 0;
-            }
-            !/^>/ {
-                print $0;
-                current_length += length($0);
-            }
-            END {
-                if (current_contig != "" && current_length >= '$MIN_CONTIG_LEN') {
-                    print current_contig "," sample "," assembler "," current_length "," file >> "'$contig_info'";
-                }
-            }' >> "$collected_contigs"
-            
-            ((total_contigs += n_contigs)) || true
-            ((total_samples++)) || true
+            # Find all contig files for this assembler
+            find "$assembler_dir" -name "*_contigs.fasta" | sort | while read -r contig_file; do
+                process_contig_file "$contig_file" "$assembler" "individual"
+            done
         done
-    done
+    elif [[ "$INPUT_TYPE" == "strategic" ]]; then
+        # Process strategic co-assembly groups
+        echo "  Processing strategic co-assembly groups..."
+        
+        # Find all group directories
+        find "$INPUT_DIR" -maxdepth 1 -type d -name "group_*" | sort | while read -r group_dir; do
+            local group_name=$(basename "$group_dir")
+            echo "    Processing $group_name..."
+            
+            # Process each assembler for this group
+            for assembler in $ASSEMBLER_PRIORITY; do
+                local contig_file="$group_dir/${assembler}/${group_name}_contigs.fasta"
+                if [[ -f "$contig_file" ]]; then
+                    process_contig_file "$contig_file" "$assembler" "$group_name"
+                fi
+            done
+        done
+    fi
+}
+
+# Function to process individual contig files
+process_contig_file() {
+    local contig_file="$1"
+    local assembler="$2"
+    local source_name="$3"  # sample name for individual, group name for strategic
+    
+    local collected_contigs="$OUTPUT_DIR/temp/all_${INPUT_TYPE}_contigs.fasta"
+    local contig_info="$OUTPUT_DIR/temp/contig_info.txt"
+    
+    if [[ ! -f "$contig_file" ]]; then
+        return
+    fi
+    
+    echo "    Processing: $source_name ($assembler)"
+    
+    # Count contigs in this file
+    local n_contigs=$(grep -c "^>" "$contig_file" || echo "0")
+    
+    if [[ $n_contigs -eq 0 ]]; then
+        echo "      Warning: No contigs found in $contig_file"
+        return
+    fi
+    
+    # Filter contigs by length and add to collection
+    seqtk seq -L "$MIN_CONTIG_LEN" "$contig_file" | \
+    awk -v source="$source_name" -v assembler="$assembler" -v file="$contig_file" -v input_type="$INPUT_TYPE" '
+    /^>/ {
+        # Update contig ID to include meta-assembly prefix
+        contig_id = substr($0, 2);  # Remove >
+        new_id = "META_" input_type "_" source "_" assembler "_" contig_id;
+        print ">" new_id;
+        
+        # Store info for tracking
+        current_contig = new_id;
+        current_length = 0;
+    }
+    !/^>/ {
+        print $0;
+        current_length += length($0);
+    }
+    END {
+        if (current_contig != "" && current_length >= '$MIN_CONTIG_LEN') {
+            print current_contig "," source "," assembler "," current_length "," file >> "'$contig_info'";
+        }
+    }' >> "$collected_contigs"
     
     # Count final collected contigs
+    local collected_contigs="$OUTPUT_DIR/temp/all_${INPUT_TYPE}_contigs.fasta"
     local final_contigs=$(grep -c "^>" "$collected_contigs" || echo "0")
     
     echo "  Collection summary:"
-    echo "    Total input contigs: $total_contigs"
     echo "    Contigs after length filtering: $final_contigs"
-    echo "    Samples processed: $total_samples"
     
     if [[ $final_contigs -eq 0 ]]; then
         echo "Error: No contigs collected for meta-assembly"
@@ -120,7 +246,7 @@ collect_individual_contigs() {
 deduplicate_contigs() {
     echo "Deduplicating contigs..."
     
-    local input_contigs="$OUTPUT_DIR/temp/all_individual_contigs.fasta"
+    local input_contigs="$OUTPUT_DIR/temp/all_${INPUT_TYPE}_contigs.fasta"
     local deduplicated_contigs="$OUTPUT_DIR/temp/deduplicated_contigs.fasta"
     local overlap_file="$OUTPUT_DIR/temp/overlaps.paf"
     local log_file="$OUTPUT_DIR/logs/deduplication.log"
@@ -517,31 +643,39 @@ echo ""
 check_dependencies
 
 # Validate input directory
-if [[ ! -d "$INDIVIDUAL_DIR" ]]; then
-    echo "Error: Individual assemblies directory not found: $INDIVIDUAL_DIR"
-    echo "Please run individual assemblies first"
+if [[ ! -d "$INPUT_DIR" ]]; then
+    echo "Error: Assembly directory not found: $INPUT_DIR"
+    echo "Please run $INPUT_TYPE assemblies first"
     exit 1
 fi
 
-# Check if we have any individual assemblies
+# Check if we have assemblies
 n_assemblies=0
-for assembler in $ASSEMBLER_PRIORITY; do
-    if [[ -d "$INDIVIDUAL_DIR/$assembler" ]]; then
-        n_assemblies=$((n_assemblies + $(find "$INDIVIDUAL_DIR/$assembler" -name "*_contigs.fasta" | wc -l)))
+if [[ "$INPUT_TYPE" == "individual" ]]; then
+    for assembler in $ASSEMBLER_PRIORITY; do
+        if [[ -d "$INPUT_DIR/$assembler" ]]; then
+            n_assemblies=$((n_assemblies + $(find "$INPUT_DIR/$assembler" -name "*_contigs.fasta" | wc -l)))
+        fi
+    done
+    if [[ $n_assemblies -eq 0 ]]; then
+        echo "Error: No individual assembly contigs found in $INPUT_DIR"
+        echo "Expected directory structure: $INPUT_DIR/{megahit,metaspades}/*_contigs.fasta"
+        exit 1
     fi
-done
-
-if [[ $n_assemblies -eq 0 ]]; then
-    echo "Error: No individual assembly contigs found in $INDIVIDUAL_DIR"
-    echo "Expected directory structure: $INDIVIDUAL_DIR/{megahit,metaspades}/*_contigs.fasta"
-    exit 1
+elif [[ "$INPUT_TYPE" == "strategic" ]]; then
+    n_assemblies=$(find "$INPUT_DIR" -maxdepth 2 -name "*_contigs.fasta" | wc -l)
+    if [[ $n_assemblies -eq 0 ]]; then
+        echo "Error: No strategic assembly contigs found in $INPUT_DIR"
+        echo "Expected directory structure: $INPUT_DIR/group_*/assembler/*_contigs.fasta"
+        exit 1
+    fi
 fi
 
-echo "Found $n_assemblies individual assemblies to process"
+echo "Found $n_assemblies $INPUT_TYPE assemblies to process"
 echo ""
 
-# Step 1: Collect contigs from individual assemblies
-collect_individual_contigs
+# Step 1: Collect contigs from assemblies
+collect_assembly_contigs
 
 # Step 2: Deduplicate overlapping/redundant contigs
 deduplicate_contigs
