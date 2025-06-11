@@ -1,0 +1,91 @@
+# Data files
+data/
+*.fastq
+*.fastq.gz
+*.fasta
+*.fa
+*.fna
+
+# Results and outputs
+results/
+output/
+temp/
+tmp/
+
+# Log files
+*.log
+logs/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+
+# R files
+.Rhistory
+.RData
+.Rproj.user
+*.Rproj
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Backup files
+*.bak
+*.backup
+*.old
+
+# Temporary files
+*.tmp
+*.temp
+
+# Large database files
+*.db
+*.sqlite
+checkv-db*/
+kraken2-db*/
+
+# Compressed files (except small examples)
+*.tar.gz
+*.zip
+*.tar.bz2
+
+# Configuration files with sensitive info
+config/config.yaml
+config/secrets.yaml
+
+# Job scheduler files
+*.sh.o*
+*.sh.e*
+slurm-*.out
+
+# Assembly intermediate files
+megahit_*/
+metaspades_*/
+*/intermediate_contigs/
+*/k*/
+
+# Large binary files
+*.bam
+*.bai
+*.sam
+*.bcf
+*.vcf
+
+# Documentation builds
+docs/_build/
+site/
