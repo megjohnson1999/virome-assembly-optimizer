@@ -89,3 +89,6 @@ metaspades_*/
 # Documentation builds
 docs/_build/
 site/
+
+# Session summary
+SESSION_SUMMARY.md
