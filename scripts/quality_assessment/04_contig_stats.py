@@ -85,7 +85,8 @@ def calculate_assembly_stats(fasta_file):
     # Calculate GC content
     gc_content = (gc_count / total_bases * 100) if total_bases > 0 else 0
     
-    # Length distribution
+    # Length distribution (users should define size categories based on target organisms)
+    # Default categories are provided but may need adjustment for viral sequences
     very_short = sum(1 for x in sequences if x < 500)
     short = sum(1 for x in sequences if 500 <= x < 1000)
     medium = sum(1 for x in sequences if 1000 <= x < 5000)

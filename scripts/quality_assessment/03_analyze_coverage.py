@@ -216,16 +216,25 @@ def analyze_coverage_patterns(mapping_results, output_dir):
     
     analysis_results = {}
     
-    # 1. Identify samples with poor coverage
-    poor_coverage_threshold = 5.0  # Mean coverage < 5x
-    low_breadth_threshold = 50.0   # Coverage breadth < 50%
-    low_mapping_threshold = 30.0   # Mapping rate < 30%
+    # 1. Coverage analysis (users should define thresholds based on dataset)
+    # Note: These thresholds should be adjusted based on sequencing depth and viral diversity
     
-    poor_coverage_samples = mapping_results[
-        (mapping_results['Mean_Coverage'] < poor_coverage_threshold) |
-        (mapping_results['Coverage_Breadth'] < low_breadth_threshold) |
-        (mapping_results['Mapping_Rate'] < low_mapping_threshold)
-    ]
+    # Calculate percentiles for data-driven threshold selection
+    coverage_25th = mapping_results['Mean_Coverage'].quantile(0.25)
+    coverage_median = mapping_results['Mean_Coverage'].median() 
+    breadth_25th = mapping_results['Coverage_Breadth'].quantile(0.25)
+    mapping_25th = mapping_results['Mapping_Rate'].quantile(0.25)
+    
+    logger.info(f"Coverage distribution - 25th percentile: {coverage_25th:.2f}, median: {coverage_median:.2f}")
+    logger.info(f"Breadth 25th percentile: {breadth_25th:.2f}")
+    logger.info(f"Mapping rate 25th percentile: {mapping_25th:.2f}")
+    
+    # Users should define these thresholds
+    analysis_results['coverage_distribution'] = {
+        'coverage_stats': mapping_results['Mean_Coverage'].describe().to_dict(),
+        'breadth_stats': mapping_results['Coverage_Breadth'].describe().to_dict(),
+        'mapping_stats': mapping_results['Mapping_Rate'].describe().to_dict()
+    }
     
     analysis_results['poor_coverage'] = {
         'count': len(poor_coverage_samples),

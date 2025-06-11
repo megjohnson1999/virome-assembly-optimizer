@@ -42,16 +42,16 @@ kmer_analysis:
   # Sketch size (number of hashes)
   sketch_size: 10000
   
-  # Similarity threshold for co-assembly grouping
-  similarity_threshold: 0.8
+  # Similarity threshold for co-assembly grouping (user-defined)
+  similarity_threshold: null
   
-  # Maximum group size for co-assemblies
-  max_group_size: 8
+  # Maximum group size for co-assemblies (user-defined)
+  max_group_size: null
 
 # Variable Analysis Configuration  
 variable_analysis:
-  # Minimum R-squared threshold for important variables
-  min_r_squared: 0.1
+  # Minimum R-squared threshold for important variables (user-defined)
+  min_r_squared: null
   
   # P-value threshold for significance
   p_value_threshold: 0.05
@@ -100,11 +100,11 @@ quality_assessment:
     # Aligner to use (bwa or bowtie2)
     aligner: "bwa"
   
-  # Coverage analysis thresholds
+  # Coverage analysis thresholds (user-defined based on dataset)
   coverage_thresholds:
-    low_coverage: 5.0
-    low_breadth: 50.0
-    low_mapping: 30.0
+    low_coverage: null
+    low_breadth: null
+    low_mapping: null
 
 # Database Paths
 databases:
@@ -158,11 +158,11 @@ advanced:
     preprocessing: null
     postprocessing: null
   
-  # Additional quality filters
+  # Additional quality filters (user-defined based on target organisms)
   quality_filters:
-    min_gc_content: 20.0
-    max_gc_content: 80.0
-    max_n_content: 10.0
+    min_gc_content: null
+    max_gc_content: null
+    max_n_content: null
   
   # Performance monitoring
   monitoring:

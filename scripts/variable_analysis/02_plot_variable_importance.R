@@ -215,22 +215,21 @@ create_variable_type_comparison <- function(results, output_dir) {
 create_strategy_recommendations <- function(results, output_dir) {
   cat("Creating assembly strategy recommendations plot...\n")
   
-  # Identify different variable categories for recommendations
+  # Create categories based on statistical significance only
+  # Users should define R² thresholds based on their study requirements
   results$recommendation <- case_when(
-    results$R_squared >= 0.1 & results$p_value <= 0.05 ~ "Primary grouping variable",
-    results$R_squared >= 0.05 & results$p_value <= 0.1 ~ "Secondary grouping variable",
-    results$R_squared >= 0.02 & results$p_value <= 0.05 ~ "Consider for stratification",
-    TRUE ~ "Use k-mer similarity only"
+    results$p_value <= 0.05 ~ "Statistically significant",
+    results$p_value <= 0.1 ~ "Marginally significant",
+    TRUE ~ "Not significant"
   )
   
   # Count recommendations
   rec_summary <- results %>%
     count(recommendation) %>%
     mutate(recommendation = factor(recommendation, levels = c(
-      "Primary grouping variable",
-      "Secondary grouping variable", 
-      "Consider for stratification",
-      "Use k-mer similarity only"
+      "Statistically significant",
+      "Marginally significant", 
+      "Not significant"
     )))
   
   # Create recommendation plot

@@ -323,10 +323,12 @@ main <- function() {
   cat("=========================\n")
   print(results)
   
-  # Identify significant variables
-  significant_vars <- results$Variable[results$p_value <= 0.05 & results$R_squared >= 0.1]
+  # Identify statistically significant variables (p ≤ 0.05)
+  # Note: Users should define R² threshold based on their study requirements
+  significant_vars <- results$Variable[results$p_value <= 0.05]
   
-  cat("\nSignificant variables (p ≤ 0.05, R² ≥ 0.1):\n")
+  cat("\nStatistically significant variables (p ≤ 0.05):\n")
+  cat("Note: Consider R² values for practical significance\n")
   if (length(significant_vars) > 0) {
     cat(paste(significant_vars, collapse = ", "), "\n")
     

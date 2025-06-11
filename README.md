@@ -36,19 +36,8 @@ This toolkit addresses these challenges by providing a systematic approach to:
 Before using this toolkit, ensure your sequencing data has undergone:
 
 1. **Adapter Removal**: Remove sequencing adapters and low-quality bases
-   ```bash
-   # Example using Trimmomatic
-   trimmomatic PE -threads 8 sample_R1.fastq sample_R2.fastq \
-     sample_R1_clean.fastq sample_R1_unpaired.fastq \
-     sample_R2_clean.fastq sample_R2_unpaired.fastq \
-     ILLUMINACLIP:adapters.fa:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36
-   ```
 
-2. **Host Filtering**: Remove host contamination
-   ```bash
-   # Example using Bowtie2 against human genome
-   bowtie2 -x human_genome -1 sample_R1_clean.fastq -2 sample_R2_clean.fastq --un-conc sample_nonhost.fastq
-   ```
+2. **Host Filtering**: Remove host contamination 
 
 3. **PCR Bias Correction**: Remove PCR duplicates
    ```bash
@@ -99,7 +88,7 @@ Rscript scripts/kmer_profiling/03_visualize_similarity.R
 ```
 
 **Key Decision Points**:
-- Samples with >80% k-mer similarity are candidates for co-assembly
+- Identify samples with high k-mer similarity as candidates for co-assembly
 - Consider batch effects and technical replicates
 - Document clustering patterns for downstream grouping
 
@@ -117,7 +106,7 @@ Rscript scripts/variable_analysis/02_plot_variable_importance.R
 ```
 
 **Interpretation Guidelines**:
-- Variables with R² > 0.1 and p < 0.05 are considered important
+- Variables with significant p-values and meaningful effect sizes are considered important
 - Prioritize biological variables over technical ones
 - Use results to design co-assembly groups
 
@@ -180,6 +169,8 @@ Rscript scripts/comparison/02_generate_report.R
 4. **Coverage uniformity**: More even read coverage
 5. **Gene recovery**: Recovery of essential viral genes
 
+**Important Note on Thresholds**: This toolkit provides data distributions and statistical summaries to guide threshold selection. Users should define specific thresholds (e.g., similarity cutoffs, coverage requirements) based on their dataset characteristics, sequencing depth, and research objectives rather than using arbitrary predetermined values.
+
 ## Directory Structure
 
 ```
@@ -237,9 +228,9 @@ virome-assembly-toolkit/
 - **Time**: 4-12 hours for most datasets
 
 ### Scaling Guidelines
-- **Individual assemblies**: ~2-4 GB RAM per sample
+- **Individual assemblies**: RAM requirements scale with sample size
 - **Co-assemblies**: RAM scales with combined sample size
-- **Global co-assembly**: May require 128+ GB RAM for large datasets
+- **Global co-assembly**: May require substantial RAM for large datasets
 
 ## Troubleshooting
 
