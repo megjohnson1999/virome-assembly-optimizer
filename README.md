@@ -299,5 +299,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 For questions and support:
 - Open an issue on GitHub
-- Email: [your-email@institution.edu]
-- Documentation: [link to detailed docs]
