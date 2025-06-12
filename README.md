@@ -287,13 +287,6 @@ iqtree -s concatenated_alignment.fasta -bb 1000 -nt AUTO
 iphop predict --fa_file viral_contigs.fasta --db_dir /path/to/iphop_db --out_dir host_prediction
 ```
 
-## Citation
-
-If you use this toolkit, please cite:
-```
-[Your Paper Citation Here]
-```
-
 ## Contributing
 
 We welcome contributions! Please see our [contributing guidelines](CONTRIBUTING.md) for details.
